@@ -25,8 +25,8 @@ jobs:
 
       - name: Show PR information
         run: |
-        echo "Base ref: ${{ github.base_ref }}"
-        echo "Head ref: ${{ github.head_ref }}"
+          echo "Base ref: ${{ github.base_ref }}"
+          echo "Head ref: ${{ github.head_ref }}"
 
       - name: Fetch base branch
         run: |
