@@ -30,24 +30,24 @@ jobs:
 
       - name: Fetch base branch
         run: |
-        git fetch origin ${{ github.base_ref }}
+          git fetch origin ${{ github.base_ref }}
 
       - name: Generate report
         run: |
-        BASE=origin/${{ github.base_ref }}
+          BASE=origin/${{ github.base_ref }}
 
-        echo "Using BASE=$BASE"
+          echo "Using BASE=$BASE"
 
-        FILES_CHANGED=$(git diff --name-only $BASE HEAD | wc -l)
+          FILES_CHANGED=$(git diff --name-only $BASE HEAD | wc -l)
 
-        STATS=$(git diff --numstat $BASE HEAD)
+          STATS=$(git diff --numstat $BASE HEAD)
 
-        ADDED=$(echo "$STATS" | awk '{sum += $1} END {print sum+0}')
-        REMOVED=$(echo "$STATS" | awk '{sum += $2} END {print sum+0}')
+          ADDED=$(echo "$STATS" | awk '{sum += $1} END {print sum+0}')
+          REMOVED=$(echo "$STATS" | awk '{sum += $2} END {print sum+0}')
 
-        echo "Files: $FILES_CHANGED"
-        echo "Added: $ADDED"
-        echo "Removed: $REMOVED"
+          echo "Files: $FILES_CHANGED"
+          echo "Added: $ADDED"
+          echo "Removed: $REMOVED"
 
       - name: Create or Update Comment
         uses: actions/github-script@v7
