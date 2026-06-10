@@ -1,6 +1,7 @@
 name: PR Auto Review
 
 on:
+  push:
   pull_request:
     types:
       - opened
