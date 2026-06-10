@@ -1,7 +1,6 @@
 name: PR Auto Review
 
 on:
-  push:
   pull_request:
     types:
       - opened
@@ -60,6 +59,14 @@ jobs:
           EOF
 
           cat review.md
+      - name: Debug PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            console.log("event =", context.eventName);
+            console.log("issue =", context.issue);
+            console.log("pull_request =", context.payload.pull_request?.number);    
       - name: Create Test Comment
         uses: actions/github-script@v7
         with:
@@ -68,7 +75,7 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: context.payload.pull_request.number,
               body: "✅ PR Auto Review workflow is working"
             });
 
