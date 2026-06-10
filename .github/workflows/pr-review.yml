@@ -1,7 +1,6 @@
 name: PR Auto Review
 
 on:
-  push:
   pull_request:
     types:
       - opened
@@ -31,10 +30,15 @@ jobs:
       - name: Fetch base branch
         run: |
           git fetch origin ${{ github.base_ref }}
+      - name: Debug refs
+          run: |
+            echo "github.base_ref=${{ github.base_ref }}"
+            echo "github.head_ref=${{ github.head_ref }}"
+            echo "event=${{ github.event_name }}"
 
       - name: Generate report
         run: |
-          BASE=origin/${{ github.base_ref }}
+          BASE=${{ github.event.pull_request.base.sha }}
 
           echo "Using BASE=$BASE"
 
