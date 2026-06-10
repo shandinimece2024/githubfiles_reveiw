@@ -1,119 +1,117 @@
 name: PR Auto Review
 
 on:
-pull_request:
-types: [opened, synchronize, reopened]
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
-pull-requests: write
-contents: read
-issues: write
+  pull-requests: write
+  contents: read
+  issues: write
 
 jobs:
-review:
-runs-on: ubuntu-latest
+  review:
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-steps:
-  - name: Checkout PR
-    uses: actions/checkout@v4
-    with:
-      fetch-depth: 0
+      - name: Fetch base branch
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
 
-  - name: Fetch base branch
-    run: |
-      git fetch origin ${{ github.event.pull_request.base.ref }}
+      - name: Generate report
+        run: |
+          BASE=origin/${{ github.event.pull_request.base.ref }}
 
-  - name: Generate report
-    run: |
-      BASE=origin/${{ github.event.pull_request.base.ref }}
+          FILES_CHANGED=$(git diff --name-only $BASE HEAD | wc -l)
 
-      FILES_CHANGED=$(git diff --name-only $BASE HEAD | wc -l)
+          STATS=$(git diff --numstat $BASE HEAD)
 
-      STATS=$(git diff --numstat $BASE HEAD)
+          ADDED=$(echo "$STATS" | awk '{sum += $1} END {print sum+0}')
+          REMOVED=$(echo "$STATS" | awk '{sum += $2} END {print sum+0}')
 
-      ADDED=$(echo "$STATS" | awk '{sum += $1} END {print sum+0}')
-      REMOVED=$(echo "$STATS" | awk '{sum += $2} END {print sum+0}')
+          DIFF_TABLE=$(git diff --stat $BASE HEAD)
 
-      DIFF_TABLE=$(git diff --stat $BASE HEAD)
+          CHANGED_FILES=$(git diff --name-only $BASE HEAD)
 
-      CHANGED_FILES=$(git diff --name-only $BASE HEAD)
+          TODOS=""
 
-      TODOS=""
+          for file in $CHANGED_FILES
+          do
+            if [ -f "$file" ]; then
+              MATCHES=$(grep -nE "TODO|FIXME" "$file" || true)
 
-      for file in $CHANGED_FILES
-      do
-        if [ -f "$file" ]; then
-          MATCHES=$(grep -nE "TODO|FIXME" "$file" || true)
+              if [ ! -z "$MATCHES" ]; then
+                TODOS="${TODOS}\n### $file\n$MATCHES\n"
+              fi
+            fi
+          done
 
-          if [ ! -z "$MATCHES" ]; then
-            TODOS="${TODOS}\n### $file\n\`\`\`\n$MATCHES\n\`\`\`\n"
-          fi
-        fi
-      done
+          cat > review.md << EOF
+          <!-- PR_AUTO_REVIEW -->
 
-      cat > review.md << EOF
-      <!-- PR_AUTO_REVIEW -->
+          # Automated PR Review
 
-      # Automated PR Review
+          ## Summary
 
-      ## Summary
+          | Metric | Value |
+          |---------|--------|
+          | Files Changed | $FILES_CHANGED |
+          | Lines Added | $ADDED |
+          | Lines Removed | $REMOVED |
 
-      | Metric | Value |
-      |---------|--------|
-      | Files Changed | $FILES_CHANGED |
-      | Lines Added | $ADDED |
-      | Lines Removed | $REMOVED |
+          ## TODO / FIXME Findings
 
-      ## TODO / FIXME Findings
+          $TODOS
 
-      $TODOS
+          ## Diff Statistics
 
-      ## Diff Statistics
+          ```
+          $DIFF_TABLE
+          ```
+          EOF
 
-      \`\`\`
-      $DIFF_TABLE
-      \`\`\`
-      EOF
+      - name: Create or Update Comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
 
-  - name: Create or Update Comment
-    uses: actions/github-script@v7
-    with:
-      github-token: ${{ secrets.GITHUB_TOKEN }}
-      script: |
-        const fs = require('fs');
+            const body = fs.readFileSync('review.md', 'utf8');
 
-        const body = fs.readFileSync('review.md', 'utf8');
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
 
-        const { owner, repo } = context.repo;
-        const issue_number = context.payload.pull_request.number;
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number
+            });
 
-        const comments =
-          await github.rest.issues.listComments({
-            owner,
-            repo,
-            issue_number
-          });
+            const existing = comments.data.find(comment =>
+              comment.body.includes('<!-- PR_AUTO_REVIEW -->')
+            );
 
-        const existing =
-          comments.data.find(c =>
-            c.body.includes('<!-- PR_AUTO_REVIEW -->')
-          );
-
-        if (existing) {
-          await github.rest.issues.updateComment({
-            owner,
-            repo,
-            comment_id: existing.id,
-            body
-          });
-        } else {
-          await github.rest.issues.createComment({
-            owner,
-            repo,
-            issue_number,
-            body
-          });
-        }
-
-
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body
+              });
+            }   
