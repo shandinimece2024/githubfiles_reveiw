@@ -35,12 +35,9 @@ jobs:
           echo "github.base_ref=${{ github.base_ref }}"
           echo "github.head_ref=${{ github.head_ref }}"
           echo "event=${{ github.event_name }}"
-
       - name: Generate report
         run: |
           BASE=${{ github.event.pull_request.base.sha }}
-
-          echo "Using BASE=$BASE"
 
           FILES_CHANGED=$(git diff --name-only $BASE HEAD | wc -l)
 
@@ -49,9 +46,19 @@ jobs:
           ADDED=$(echo "$STATS" | awk '{sum += $1} END {print sum+0}')
           REMOVED=$(echo "$STATS" | awk '{sum += $2} END {print sum+0}')
 
-          echo "Files: $FILES_CHANGED"
-          echo "Added: $ADDED"
-          echo "Removed: $REMOVED"
+          cat > review.md << EOF
+          <!-- PR_AUTO_REVIEW -->
+
+          # Automated PR Review
+
+          | Metric | Value |
+          |---------|--------|
+          | Files Changed | $FILES_CHANGED |
+          | Lines Added | $ADDED |
+          | Lines Removed | $REMOVED |
+          EOF
+
+          cat review.md
 
       - name: Create or Update Comment
         uses: actions/github-script@v7
