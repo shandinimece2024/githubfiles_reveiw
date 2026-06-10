@@ -23,61 +23,31 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Show PR information
+        run: |
+        echo "Base ref: ${{ github.base_ref }}"
+        echo "Head ref: ${{ github.head_ref }}"
+
       - name: Fetch base branch
         run: |
-          git fetch origin ${{ github.event.pull_request.base.ref }}
+        git fetch origin ${{ github.base_ref }}
 
       - name: Generate report
         run: |
-          BASE=origin/${{ github.event.pull_request.base.ref }}
+        BASE=origin/${{ github.base_ref }}
 
-          FILES_CHANGED=$(git diff --name-only $BASE HEAD | wc -l)
+        echo "Using BASE=$BASE"
 
-          STATS=$(git diff --numstat $BASE HEAD)
+        FILES_CHANGED=$(git diff --name-only $BASE HEAD | wc -l)
 
-          ADDED=$(echo "$STATS" | awk '{sum += $1} END {print sum+0}')
-          REMOVED=$(echo "$STATS" | awk '{sum += $2} END {print sum+0}')
+        STATS=$(git diff --numstat $BASE HEAD)
 
-          DIFF_TABLE=$(git diff --stat $BASE HEAD)
+        ADDED=$(echo "$STATS" | awk '{sum += $1} END {print sum+0}')
+        REMOVED=$(echo "$STATS" | awk '{sum += $2} END {print sum+0}')
 
-          CHANGED_FILES=$(git diff --name-only $BASE HEAD)
-
-          TODOS=""
-
-          for file in $CHANGED_FILES
-          do
-            if [ -f "$file" ]; then
-              MATCHES=$(grep -nE "TODO|FIXME" "$file" || true)
-
-              if [ ! -z "$MATCHES" ]; then
-                TODOS="${TODOS}\n### $file\n$MATCHES\n"
-              fi
-            fi
-          done
-
-          cat > review.md << EOF
-          <!-- PR_AUTO_REVIEW -->
-
-          # Automated PR Review
-
-          ## Summary
-
-          | Metric | Value |
-          |---------|--------|
-          | Files Changed | $FILES_CHANGED |
-          | Lines Added | $ADDED |
-          | Lines Removed | $REMOVED |
-
-          ## TODO / FIXME Findings
-
-          $TODOS
-
-          ## Diff Statistics
-
-          ```
-          $DIFF_TABLE
-          ```
-          EOF
+        echo "Files: $FILES_CHANGED"
+        echo "Added: $ADDED"
+        echo "Removed: $REMOVED"
 
       - name: Create or Update Comment
         uses: actions/github-script@v7
