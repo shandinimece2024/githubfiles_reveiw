@@ -60,41 +60,16 @@ jobs:
           EOF
 
           cat review.md
-
-      - name: Create or Update Comment
+      - name: Create Test Comment
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
-
-            const body = fs.readFileSync('review.md', 'utf8');
-
-            const { owner, repo } = context.repo;
-            const issue_number = context.payload.pull_request.number;
-
-            const comments = await github.rest.issues.listComments({
-              owner,
-              repo,
-              issue_number
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "✅ PR Auto Review workflow is working"
             });
 
-            const existing = comments.data.find(comment =>
-              comment.body.includes('<!-- PR_AUTO_REVIEW -->')
-            );
-
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner,
-                repo,
-                comment_id: existing.id,
-                body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number,
-                body
-              });
-            }   
+       
